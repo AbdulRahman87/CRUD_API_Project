@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>| API - Testing |</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    #note_desc {
+      background-color: rgb(221, 221, 221);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="text-center border-bottom border-top my-3">API - Testing</h1>
+
+    <input class="form-control mt-5 text-center" placeholder="Enter the url..." type="url" id="url" autofocus />
+
+    <textarea class="form-control text-center my-3" name="data" id="data" cols="30" rows="5"
+      placeholder="Enter the body here in json format..."></textarea>
+
+    <div class="container d-flex justify-content-center gap-3">
+      <button onclick="laodData()" id="get_btn" class="btn btn-primary">
+        Get
+      </button>
+      <button id="post_btn" class="btn btn-primary">Post</button>
+    </div>
+  </div>
+
+  <div id="user_data_section" class="container my-5"></div>
+
+  <div id="pagination_section" class="container my-5 text-center">
+    <span id="prev_btn"></span>
+    <span id="next_btn"></span>
+  </div>
+</body>
+
+</html>
+
+<script>
+  let user_data_section = document.getElementById("user_data_section");
+  let previous_div,
+    previous_div_html,
+    edit_btn_value = 0,
+    note_time;
+  function laodData(value=null) {
+    let url = '';
+    if(value == null){
+      url = document.getElementById("url").value;
+    }
+    else{
+     url = value; 
+    }
+    let str = ``,
+      response_status;
+    fetch(url)
+      .then(function (response) {
+        response_status = response.status;
+        return response.json();
+      })
+      .then((data) => {
+        console.log(data);
+        if (response_status == 404) {
+          str = `<h1 class="text-center">Record not found!</h1>`;
+        } else {
+          if ("count" in data) {
+            let pointer = data;
+            data = data.results;
+            for (item of data) {
+              const date = new Date(item.date_time);
+              str += `<div id="container${item.note_id}">
+              <div class="border-top py-2 border-bottom">
+            <div class="d-flex justify-content-between">
+              <div class="my-2">
+                <h2 id="title_${item.note_id}" class="border-bottom border-3 mt-5 d-inline">
+                  ${item.note_title}
+                </h2>
+              </div>
+              <div id="time_${item.note_id}" class="my-1 text-end text-muted">${date.toDateString()} ${date.toLocaleTimeString()}</div>
+            </div>
+            <div id="desc_${item.note_id}" class="fs-5 my-2 shadow-md p-3 rounded">
+              ${item.note_desc}
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+              <button id="e${item.note_id}" onclick="editData(this.id)" class="btn btn-success my-2">Edit</button>
+              <button id="d${item.note_id}" onclick="makeDeleteRequest(this.id)" class="btn delete btn-danger my-2">Delete</button>
+            </div>
+          </div>
+          </div>`;
+            }
+            if(pointer.next != null){
+              document.getElementById("next_btn").innerHTML = `<button data-pointer-link=${pointer.next} onclick="pagination_handler(this)" class="mx-2 btn btn-primary">Next</button>`;
+            }
+            else{
+              document.getElementById("next_btn").innerHTML = '';
+            }
+            if(pointer.previous != null){
+              document.getElementById("prev_btn").innerHTML = `<button data-pointer-link=${pointer.previous} onclick="pagination_handler(this)" class="mx-2 btn btn-primary">Previous</button>`;
+            }
+            else{
+              document.getElementById("prev_btn").innerHTML = '';
+            }
+          } else {
+            const date = new Date(data.date_time);
+            str += `<div id="container${data.note_id}">
+              <div class="border-top py-2 border-bottom">
+            <div class="d-flex justify-content-between">
+              <div class="my-2">
+                <h2 id="title_${data.note_id}" class="border-bottom border-3 mt-5 d-inline">
+                  ${data.note_title}
+                </h2>
+              </div>
+              <div id="time_${data.note_id}" class="my-1 text-end text-muted">${date.toDateString()} ${date.toLocaleTimeString()}</div>
+            </div>
+            <div id="desc_${data.note_id}" class="fs-5 my-2 shadow-md p-3 rounded">
+              ${data.note_desc}
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+              <button id="e${data.note_id}" onclick="editData(this.id)" class="btn btn-success my-2">Edit</button>
+              <button id="d${data.note_id}" onclick="makeDeleteRequest" class="btn delete btn-danger my-2">Delete</button>
+            </div>
+          </div>
+          </div>`;
+          }
+        }
+        user_data_section.innerHTML = str;
+      });
+  }
+
+  document.getElementById("post_btn").addEventListener("click", postData);
+  function postData() {
+    if (validateInput()) {
+      let status_code, response;
+      let url = document.getElementById("url").value;
+      let user_data = document.getElementById("data").value;
+      let response_string = "";
+      fetch(url, {
+        method: "POST",
+
+        body: user_data,
+
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+        },
+      })
+        .then(function (response) {
+          status_code = response.status;
+          return response.json();
+        })
+        .then(function (json) {
+          response = json;
+          if (status_code == 400) {
+            for (item in response) {
+              response_string += `<h3 class="text-center">${item} is required</h3>`;
+            }
+          } else if (status_code == 201) {
+            const date = new Date(response.date_time);
+            response_string = `<div id="container${response.note_id}">
+              <div class="border-top py-2 border-bottom">
+            <div class="d-flex justify-content-between">
+              <div class="my-2">
+                <h2 id="title_${response.note_id}" class="border-bottom border-3 mt-5 d-inline">
+                  ${response.note_title}
+                </h2>
+              </div>
+              <div id="time_${response.note_id}" class="my-1 text-end text-muted">${date.toDateString()} ${date.toLocaleTimeString()}</div>
+            </div>
+            <div id="desc_${response.note_id}" class="fs-5 my-2 shadow-md p-3 rounded">
+              ${response.note_desc}
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+              <button id="e${response.note_id}" onclick="editData(this.id)" class="btn btn-success my-2">Edit</button>
+              <button id="d${response.note_id}" onclick="makeDeleteRequest(this.id)" class="btn delete btn-danger my-2">Delete</button>
+            </div>
+          </div>
+          </div>`;
+          }
+          user_data_section.innerHTML = response_string;
+        });
+    } else {
+      alert("Please enter data in json format in textarea!");
+    }
+  }
+
+  function validateInput() {
+    let value = document.getElementById("data").value;
+    try {
+      JSON.parse(value);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  function editData(button_id) {
+    if (edit_btn_value == 1) {
+      previous_div.innerHTML = previous_div_html;
+    }
+    edit_btn_value = 1;
+    let note_id = button_id.slice(1);
+    let note_title = document.getElementById(`title_${note_id}`).innerText;
+    let note_desc = document.getElementById(`desc_${note_id}`).innerText;
+    let container = document.getElementById(`container${note_id}`);
+    note_time = document.getElementById("time_" + note_id).innerText;
+    previous_div = container;
+    previous_div_html = container.innerHTML;
+
+    let str = `<div class="form-group mt-5 mb-3">
+                        <input type="number" class="form-control" name="note_id" value="${note_id}" hidden>
+                        <input id="upd_note_title${note_id}" type="text" class="form-control" name="note_title" placeholder="Enter note's title to update" value="${note_title}" autofocus onfocus="var temp_value = this.value; this.value=''; this.value=temp_value;">
+                    </div>
+                    <div class="form-group mb-3">
+                        <textarea id="upd_note_desc${note_id}" placeholder="Enter note's description to update" class="form-control" name="note_desc" rows="3">${note_desc}</textarea>
+                    </div>
+                    <button onclick="makePutRequest(${note_id})" class="mb-3 d-block mx-auto btn btn-success"/>Submit</button>`;
+    container.innerHTML = str;
+  }
+
+  function makePutRequest(noteId) {
+    let upd_note_title = document.getElementById(
+      "upd_note_title" + noteId
+    ).value;
+    let upd_note_desc = document.getElementById("upd_note_desc" + noteId).value;
+    let currentDiv = document.getElementById("container" + noteId);
+    currentDiv.innerHTML = `
+              <div class="border-top py-2 border-bottom">
+            <div class="d-flex justify-content-between">
+              <div class="my-2">
+                <h2 id="title_${noteId}" class="border-bottom border-3 mt-5 d-inline">
+                  ${upd_note_title}
+                </h2>
+              </div>
+              <div class="my-1 text-end text-muted">${note_time}</div>
+            </div>
+            <div id="desc_${noteId}" class="fs-5 my-2 shadow-md p-3 rounded">
+              ${upd_note_desc}
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+              <button id="e${noteId}" onclick="editData(this.id)" class="btn btn-success my-2">Edit</button>
+              <button id="d${noteId}" onclick="makeDeleteRequest(this.id)" class="btn delete btn-danger my-2">Delete</button>
+            </div>
+          </div>`;
+
+    let url = `http://127.0.0.1:8000/notesapi/${noteId}/`;
+    let status_code,
+      response_string = ``;
+    let upd_data = {
+      note_title: upd_note_title,
+      note_desc: upd_note_desc,
+    };
+
+    fetch(url, {
+      method: "PUT",
+
+      body: JSON.stringify(upd_data),
+
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    })
+      .then(function (response) {
+        status_code = response.status;
+        return response.json();
+      })
+      .then(function (data) {
+        if (status_code == 400) {
+          for (item in data) {
+            response_string += `<h3 class="text-center">${item} is required</h3>`;
+            currentDiv.innerHTML = response_string;
+          }
+        }
+      });
+  }
+
+  function makeDeleteRequest(noteId) {
+    let note_id = noteId.slice(1);
+    let currentDiv = document.getElementById("container" + note_id);
+    let url = `http://127.0.0.1:8000/notesapi/${note_id}/`;
+    let status_code;
+
+    fetch(url, {
+      method: "DELETE",
+
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    })
+      .then(function (response) {
+        status_code = response.status;
+        return response.text();
+      })
+      .then(function (data) {
+        laodData();
+      });
+  }
+
+  function pagination_handler(button){
+    url = button.getAttribute("data-pointer-link");
+    document.getElementById("url").value = url;
+    laodData(url);
+  }
+
+</script>

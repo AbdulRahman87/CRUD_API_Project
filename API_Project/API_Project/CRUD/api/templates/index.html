@@ -1,0 +1,173 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>| Home |</title>
+    <style>
+        .navbar {
+            background-color: rgb(187, 18, 60);
+        }
+
+        #sign {
+            background-color: rgb(22, 156, 51);
+            border-radius: 15px;
+        }
+
+        a{
+            margin: 10px;
+          }
+          button{
+            cursor: pointer;
+          }
+          button:hover{
+            background: black;
+            color: white;
+          }
+          .active{
+            background: blue;
+            color: white;
+          }        
+
+    </style>
+    <link rel="stylesheet" href="{% static "CSS/style.css" %}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand fs-3 text-light" href="{% url "Home" %}">Notes</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item mx-2">
+                        <a class="nav-link text-light fs-5 active" aria-current="page" href="{% url "Home" %}">Home</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <h3 id="text" class="mt-3 container text-center">Welcome to iNotes:- Creating & managing your notes made
+        easy.</h3>
+
+
+        <div class="container rounded">
+
+            <div id="form-body" class="shadow-lg my-3 p-4 mt-4 bg-body">
+                <div id="sign" class="text-center fs-2 mb-5 p-4 text-light ">
+                    Create your Notes:
+                </div>
+                <form action="" method='post'> {% csrf_token %}
+                    <div class="my-4 col-sm-8 m-auto">
+                        <input required type="text" class="form-control text-center" id="title" name="title"
+                            placeholder="Enter note title">
+                    </div>
+    
+                    <div class="my-4 col-sm-8 m-auto">
+                        <textarea required class="form-control my-auto text-center" id="desc" rows="4" name="desc" cols="8"
+                            placeholder="Enter description here"></textarea>
+                    </div>
+    
+                    <input type="submit" id="submitBtn" value="Create Note"
+                        class="btn btn-outline-success d-block m-auto my-3 col-md-6 fs-5 " />
+                </form>
+            </div>
+    
+        </div>
+
+
+        <div class="container">
+            {% for note in notes %}
+            <div id="container{{note.note_id}}" class="my-3 border rounded p-2 ">
+                <div id="note_title{{note.note_id}}" class="my-2">
+                    <h2 id="title_{{note.note_id}}" class="border-bottom border-3 mt-5 d-inline">{{note.note_title}}</h2>
+                </div>
+                <div class="my-1 text-end text-muted">{{note.date_time|naturaltime}}</div>
+                <div id="note_desc{{note.note_id}}">
+                <div id="desc_{{note.note_id}}" class="fs-5 my-2 bg-light shadow-md p-3 rounded">{{note.note_desc}}</div>
+                </div>
+                <div class="text-center mb-1">
+                    <button id="e{{note.note_id}}" class="btn btn-primary mx-3 edit">Edit</button>
+                    <button id="d{{note.note_id}}" class="btn delete btn-danger">Delete</button>
+                </div>
+            </div>
+            {% empty %}
+            <h1 class="text-center my-5">No Notes</h1>
+            {% endfor %}
+        </div> 
+
+
+        <center class="my-5">
+            <span> Page {{notes.number}} of {{notes.paginator.num_pages}} </span> <br>
+            {% if notes.has_previous %}
+            <a href="?page=1">First</a>
+            <a href="?page={{notes.previous_page_number}}">Previous</a>
+            {% endif %}
+            {% if notes.has_next %}
+                <a href="?page={{notes.next_page_number}}">Next</a>
+                <a href="?page={{notes.paginator.num_pages}}">Last</a>
+            {% endif %}
+    
+            <br>
+           
+            {% for i in notes.paginator.page_range %}
+              {% if i == notes.number %}
+                <button class="active">{{i}}</button>
+              {% elif i > notes.number|add:'-4' and i < notes.number|add:'4' %}
+                <button onclick="window.location.href='?page={{i}}'">{{i}}</button>
+              {% endif %}
+            {% endfor %}
+    
+    
+        </center>
+
+        <form method="post" id="delete_form" action="{% url 'DeleteNote' %}"> {% csrf_token %}
+            <input type="number" name="note_id" id="note_id" hidden>
+        </form>
+
+</body>
+</html>
+
+<script>
+
+    let buttons = document.getElementsByClassName("delete");
+    let delete_form = document.getElementById("delete_form");
+    for(let btn of buttons){
+        btn.addEventListener("click", (e)=>{
+            let note_id = e.target.id.slice(1);
+            document.getElementById("note_id").value = note_id;
+            delete_form.submit();
+        })
+    }
+
+    let editButtons = document.getElementsByClassName("edit");
+    for(let btn of editButtons){
+        btn.addEventListener("click", (e)=>{
+            let note_id = e.target.id.slice(1);
+            let note_title = document.getElementById(`title_${note_id}`).innerText;
+            let note_desc = document.getElementById(`desc_${note_id}`).innerText;
+            let container = document.getElementById(`container${note_id}`);
+
+            str = `<form method="post" action="{% url "UpdateNote" %}"> {% csrf_token %}
+                    <div class="form-group mt-5 mb-3">
+                        <input type="number" class="form-control" name="note_id" value="${note_id}" hidden>
+                        <input type="text" class="form-control" name="note_title" placeholder="Enter note's title to update" value="${note_title}" autofocus onfocus="var temp_value = this.value; this.value=''; this.value=temp_value;">
+                    </div>
+                    <div class="form-group mb-3">
+                        <textarea placeholder="Enter note's description to update" class="form-control" name="note_desc" rows="3">${note_desc}</textarea>
+                    </div>
+                    <input type="submit" value="Submit" class="mb-3 d-block mx-auto btn btn-success"/>
+                </form>`;
+            container.innerHTML = str;
+
+        });
+    }
+
+</script>
